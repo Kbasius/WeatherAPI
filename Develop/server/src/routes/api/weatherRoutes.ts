@@ -8,15 +8,15 @@ import WeatherService from '../../service/weatherService.js';
 router.post('/', async (req: Request, res: Response) => {
   try {
     // TODO: GET weather data from city name
-    const { city } = req.body;
-    if (!city) {
+    const { cityName } = req.body;
+    if (!cityName) {
       return res.status(400).json({ error: 'City name is required' });
     }
 
-    const weatherData = await WeatherService.getWeatherForCity(city);
+    const weatherData = await WeatherService.getWeatherForCity(cityName);
 
     // TODO: save city to search history
-    await HistoryService.addCity(city);
+    await HistoryService.addCity(cityName);
 
     return res.status(200).json(weatherData);
   } catch (error) {

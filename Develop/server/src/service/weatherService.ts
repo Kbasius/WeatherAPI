@@ -49,7 +49,7 @@ class WeatherService {
 
   // TODO: Create buildWeatherQuery method
   private buildWeatherQuery(coordinates: Coordinates): string {
-    return `${this.baseURL}/data/2.5/weather?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${this.apiKey}&units=metric`;
+    return `${this.baseURL}/data/2.5/onecall?lat=${coordinates.lat}&lon=${coordinates.lon}&exclude=minutely,hourly,alerts&appid=${this.apiKey}&units=metric`;
   }
 
   // TODO: Create fetchLocationData method
@@ -86,6 +86,7 @@ class WeatherService {
   private async fetchWeatherData(coordinates: Coordinates): Promise<WeatherData> {
     try {
       const response = await axios.get(this.buildWeatherQuery(coordinates));
+      console.log('OpenWeather API response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching weather data:', error);
@@ -106,15 +107,14 @@ class WeatherService {
   // TODO: Complete buildForecastArray method
   private buildForecastArray(weatherData: WeatherData): Weather[] {
     const forecastArray: Weather[] = [];
-  
+
     if (!weatherData || !weatherData.daily || weatherData.daily.length === 0) {
       console.error('No forecast data available');
       return forecastArray;
     }
-  
-    const numberOfDays = weatherData.daily.length;
-    const daysToForecast = Math.min(5, numberOfDays - 1);
-  
+
+    const daysToForecast = Math.min(5, weatherData.daily.length);
+
     for (let i = 1; i <= daysToForecast; i++) {
       const dayData = weatherData.daily[i];
       forecastArray.push({
@@ -124,14 +124,34 @@ class WeatherService {
         windSpeed: dayData.wind_speed,
       });
     }
+
     return forecastArray;
   }
 
   // TODO: Complete getWeatherForCity method
-  public async getWeatherForCity(city: string): Promise<{ currentWeather: Weather; forecast: Weather[] }> {
+  public async getWeatherForCity(city: string): Promise<{ currentWeather: Weather | null; forecast: Weather[] }> {
     try {
+
       const coordinates = await this.fetchAndDestructureLocationData(city);
+
+      if (!coordinates) {
+        console.error(`No coordinates found for city: ${city}`);
+        return {
+          currentWeather: null,
+          forecast: [],
+        };
+      }
+
       const weatherData = await this.fetchWeatherData(coordinates);
+
+      if (!weatherData || !weatherData.daily || weatherData.daily.length === 0) {
+        console.error('No current weather data available');
+        return {
+          currentWeather: null,
+          forecast: [],
+        };
+      }
+
       const currentWeather = this.parseCurrentWeather(weatherData);
       const forecast = this.buildForecastArray(weatherData);
 
@@ -140,7 +160,11 @@ class WeatherService {
         forecast,
       };
     } catch (error) {
-      throw new Error('Could not get weather data for city');
+      console.error('Error fetching weather data for city:', error);
+      return {
+        currentWeather: null,  
+        forecast: [],          
+      };
     }
   }
 }

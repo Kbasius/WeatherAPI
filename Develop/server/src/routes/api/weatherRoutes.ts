@@ -19,8 +19,18 @@ router.post('/', async (req: Request, res: Response) => {
     await HistoryService.addCity(cityName);
 
     return res.status(200).json(weatherData);
-  } catch (error) {
-    console.error('Error fetching weather data:', error);
+  } catch (error: unknown) {
+    
+    if (error instanceof Error) {
+      console.error('Error fetching weather data:', error.message);  
+    } else {
+      
+      console.error('Unknown error occurred:', error);
+    }
+
+    console.error('Error in POST /api/weather:', error);
+
+    
     return res.status(500).json({ error: 'Could not retrieve weather data' });
   }
 });

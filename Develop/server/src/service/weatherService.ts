@@ -42,21 +42,22 @@ class WeatherService {
     this.apiKey = API_KEY!;
   }
 
+  // TODO: Create buildGeocodeQuery method
+  private buildGeocodeQuery(query: string): string {
+    return `${this.baseURL}/geo/1.0/direct?q=${query}&limit=1&appid=${this.apiKey}`;
+  }
+
+  // TODO: Create buildWeatherQuery method
+  private buildWeatherQuery(coordinates: Coordinates): string {
+    return `${this.baseURL}/data/2.5/weather?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${this.apiKey}&units=metric`;
+  }
+
   // TODO: Create fetchLocationData method
   private async fetchLocationData(query: string): Promise<Coordinates> {
     try {
-      const response = await axios.get(`${this.baseURL}/geo/1.0/direct`, {
-        params: {
-          q: query,
-          limit: 1,
-          appid: this.apiKey,
-        },
-      });
+      const response = await axios.get(this.buildGeocodeQuery(query));
       const locationData = response.data[0];
-      return {
-        lat: locationData.lat,
-        lon: locationData.lon,
-      };
+      return { lat: locationData.lat, lon: locationData.lon };
     } catch (error) {
       console.error('Error fetching location data:', error);
       throw new Error('Could not fetch location data.');
@@ -71,16 +72,6 @@ class WeatherService {
     };
   }
 
-  // TODO: Create buildGeocodeQuery method
-  private buildGeocodeQuery(query: string): string {
-    return `${this.baseURL}/geo/1.0/direct?q=${query}&limit=1&appid=${this.apiKey}`;
-  }
-
-  // TODO: Create buildWeatherQuery method
-  private buildWeatherQuery(coordinates: Coordinates): string {
-    return `${this.baseURL}/data/2.5/weather?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${this.apiKey}&units=metric`;
-  }
-
   // TODO: Create fetchAndDestructureLocationData method
   private async fetchAndDestructureLocationData(query: string): Promise<Coordinates> {
     try {
@@ -92,17 +83,9 @@ class WeatherService {
   }
 
   // TODO: Create fetchWeatherData method
-  private async fetchWeatherData(coordinates: Coordinates): Promise<any> {
+  private async fetchWeatherData(coordinates: Coordinates): Promise<WeatherData> {
     try {
-      const response = await axios.get(`${this.baseURL}/data/2.5/onecall`, {
-        params: {
-          lat: coordinates.lat,
-          lon: coordinates.lon,
-          appid: this.apiKey,
-          units: 'metric',
-          exclude: 'current,minutely,hourly,alerts',
-        },
-      });
+      const response = await axios.get(this.buildWeatherQuery(coordinates));
       return response.data;
     } catch (error) {
       console.error('Error fetching weather data:', error);
@@ -145,16 +128,28 @@ class WeatherService {
   }
 
   // TODO: Complete getWeatherForCity method
-  public async getWeatherForCity(city: string): Promise<{ currentWeather: Weather, forecast: Weather[] }> {
+  public async getWeatherForCity(city: string): Promise<{ currentWeather: Weather; forecast: Weather[] }> {
     try {
-      const coordinates = await this.fetchLocationData(city);
+      // Step 1: Fetch location data and destructure the coordinates
+      const coordinates = await this.fetchAndDestructureLocationData(city);
+
+      // Step 2: Fetch weather data using coordinates
       const weatherData = await this.fetchWeatherData(coordinates);
-      const currentWeather = this.parseCurrentWeather(weatherData.current);
+
+      // Step 3: Parse the current weather
+      const currentWeather = this.parseCurrentWeather(weatherData);
+
+      // Step 4: Build and return the 5-day forecast
       const forecast = this.buildForecastArray(weatherData);
-      return { currentWeather, forecast };
+
+      return {
+        currentWeather,
+        forecast,
+      };
     } catch (error) {
       throw new Error('Could not get weather data for city');
     }
   }
+}
 
 export default new WeatherService();
